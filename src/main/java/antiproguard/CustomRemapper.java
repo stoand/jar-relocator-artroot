@@ -1,4 +1,4 @@
-package taxli;
+package antiproguard;
 
 import org.objectweb.asm.commons.Remapper;
 

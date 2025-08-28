@@ -1,4 +1,4 @@
-package taxli;
+package antiproguard;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 
@@ -75,8 +75,8 @@ public class JarRelocator {
     }
 
     public static void main(String[] args) throws IOException {
-        File input = new File("/home/andreas/IdeaProjects/anti-proguard/mega/mega.jar");
-        File output = new File("/home/andreas/IdeaProjects/anti-proguard/mega.newroot.jar");
+        File input = new File(args[0]);
+        File output = new File(args[1]);
 
 //        // Create a dummy input JAR for demonstration
 //        try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(input))) {
