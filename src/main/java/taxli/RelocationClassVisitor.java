@@ -1,0 +1,47 @@
+package taxli;
+
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.commons.Remapper;
+import org.objectweb.asm.commons.ClassRemapper; // For convenience in chaining
+
+import static org.objectweb.asm.Opcodes.ASM9;
+
+
+public class RelocationClassVisitor extends ClassRemapper {
+
+    private final Remapper remapper;
+
+    public RelocationClassVisitor(ClassVisitor classVisitor, Remapper remapper) {
+        super(ASM9, classVisitor, remapper);
+        this.remapper = remapper;
+    }
+
+    @Override
+    public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+        // Remap the class name itself, its superclass, and implemented interfaces
+        super.visit(version, access, remapper.map(name), remapper.mapSignature(signature, true), remapper.map(superName), remapper.mapTypes(interfaces));
+    }
+
+    // This method is called for each annotation on the class
+    @Override
+    public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+        return super.visitAnnotation(remapper.mapDesc(descriptor), visible);
+    }
+
+    // This method is called for each field
+    @Override
+    public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
+        // Remap the field's descriptor and signature
+        return super.visitField(access, remapper.mapFieldName(name, name, descriptor), remapper.mapDesc(descriptor), remapper.mapSignature(signature, false), remapper.mapValue(value));
+    }
+
+    // This method is called for each method
+    @Override
+    public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+        // Remap the method's name, descriptor, signature, and exceptions
+        return super.visitMethod(access, remapper.mapMethodName(name, name, descriptor), remapper.mapMethodDesc(descriptor), remapper.mapSignature(signature, false), exceptions == null ? null : remapper.mapTypes(exceptions));
+    }
+}
