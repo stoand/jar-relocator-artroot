@@ -92,7 +92,7 @@ public class JarRelocator {
         Map<String, String> relocations = new HashMap<>();
         // Relocate classes in the root package to "com/relocated/root/"
         // ASM Remapper expects internal names (slashes, not dots)
-        relocations.put("", "com/relocated/root/"); // Empty string for root package
+        relocations.put("", "artroot/"); // Empty string for root package
 
         // Example: Relocate another specific package
 //        relocations.put("com/example/", "org/newexample/");

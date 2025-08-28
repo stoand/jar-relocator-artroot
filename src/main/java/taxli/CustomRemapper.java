@@ -16,11 +16,17 @@ public class CustomRemapper extends Remapper {
 
     @Override
     public String map(String internalName) {
+
+        if (internalName == null) {
+            return null;
+        }
+
         // Find a relocation pattern that matches the internal name.
         for (Map.Entry<String, String> entry : relocations.entrySet()) {
             String originalPrefix = entry.getKey();
 
-            if (internalName.startsWith(originalPrefix)) {
+            // TODO - check if path contains a slash
+            if (!internalName.contains("/")) {
                 String newPrefix = entry.getValue();
                 return newPrefix + internalName.substring(originalPrefix.length());
             }

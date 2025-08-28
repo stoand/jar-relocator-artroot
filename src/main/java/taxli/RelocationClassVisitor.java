@@ -23,11 +23,12 @@ public class RelocationClassVisitor extends ClassRemapper {
 
     @Override
     public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-        if (signature != null && !signature.startsWith("<")) {
-            // Remap the class name itself, its superclass, and implemented interfaces
-            super.visit(version, access, remapper.map(name), remapper.mapSignature(signature, true), remapper.map(superName), remapper.mapTypes(interfaces));
-        }
         this.className = name;
+        String maybeChangedSignature = signature;
+        if (signature != null && !signature.startsWith("<")) {
+            maybeChangedSignature = remapper.mapSignature(signature, true);
+        }
+        super.visit(version, access, remapper.map(name), maybeChangedSignature, remapper.map(superName), remapper.mapTypes(interfaces));
     }
 
     // This method is called for each annotation on the class
