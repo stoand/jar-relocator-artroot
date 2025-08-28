@@ -3,33 +3,35 @@ package taxli;
 import org.objectweb.asm.commons.Remapper;
 
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class CustomRemapper extends Remapper {
 
     private final Map<String, String> relocations;
 
     public CustomRemapper(Map<String, String> relocations) {
+        // The keys of the map should be the internal names (e.g., "com/example/").
+        // The values should be the relocated internal names (e.g., "org/relocated/").
         this.relocations = relocations;
     }
 
     @Override
     public String map(String internalName) {
+        // Find a relocation pattern that matches the internal name.
         for (Map.Entry<String, String> entry : relocations.entrySet()) {
-            String originalPrefix = entry.getKey(); // e.g., "org/example/oldpackage/"
-            String newPrefix = entry.getValue();    // e.g., "com/new/package/"
+            String originalPrefix = entry.getKey();
 
             if (internalName.startsWith(originalPrefix)) {
+                String newPrefix = entry.getValue();
                 return newPrefix + internalName.substring(originalPrefix.length());
             }
         }
-        return internalName; // No relocation applied
+
+        // If no relocation applies, return the original name.
+        return internalName;
     }
 
-    // ASM also calls mapFieldName, mapMethodName, mapDesc etc.
-    // The default implementation in Remapper typically calls map(String internalName)
-    // for relevant parts of the string, which is why our map() override is crucial.
-    // If you need very specific remapping for field names or method names that
-    // differ from class names, you would override those too.
+    // You should rely on the default Remapper methods for other types of mapping,
+    // as they correctly identify what should and should not be mapped.
+    // For example, mapSignature will internally call map() only on the class names.
+    // So, you should NOT try to manually parse the signature.
 }

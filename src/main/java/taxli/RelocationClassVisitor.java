@@ -14,6 +14,8 @@ public class RelocationClassVisitor extends ClassRemapper {
 
     private final Remapper remapper;
 
+    protected String className;
+
     public RelocationClassVisitor(ClassVisitor classVisitor, Remapper remapper) {
         super(ASM9, classVisitor, remapper);
         this.remapper = remapper;
@@ -21,8 +23,11 @@ public class RelocationClassVisitor extends ClassRemapper {
 
     @Override
     public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
-        // Remap the class name itself, its superclass, and implemented interfaces
-        super.visit(version, access, remapper.map(name), remapper.mapSignature(signature, true), remapper.map(superName), remapper.mapTypes(interfaces));
+        if (signature != null && !signature.startsWith("<")) {
+            // Remap the class name itself, its superclass, and implemented interfaces
+            super.visit(version, access, remapper.map(name), remapper.mapSignature(signature, true), remapper.map(superName), remapper.mapTypes(interfaces));
+        }
+        this.className = name;
     }
 
     // This method is called for each annotation on the class
@@ -35,13 +40,13 @@ public class RelocationClassVisitor extends ClassRemapper {
     @Override
     public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
         // Remap the field's descriptor and signature
-        return super.visitField(access, remapper.mapFieldName(name, name, descriptor), remapper.mapDesc(descriptor), remapper.mapSignature(signature, false), remapper.mapValue(value));
+        return super.visitField(access, remapper.mapFieldName(className, name, descriptor), remapper.mapDesc(descriptor), remapper.mapSignature(signature, false), remapper.mapValue(value));
     }
 
     // This method is called for each method
     @Override
     public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
         // Remap the method's name, descriptor, signature, and exceptions
-        return super.visitMethod(access, remapper.mapMethodName(name, name, descriptor), remapper.mapMethodDesc(descriptor), remapper.mapSignature(signature, false), exceptions == null ? null : remapper.mapTypes(exceptions));
+        return super.visitMethod(access, remapper.mapMethodName(className, name, descriptor), remapper.mapMethodDesc(descriptor), remapper.mapSignature(signature, false), exceptions == null ? null : remapper.mapTypes(exceptions));
     }
 }
