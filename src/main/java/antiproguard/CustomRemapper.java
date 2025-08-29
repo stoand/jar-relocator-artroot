@@ -13,25 +13,25 @@ public class CustomRemapper extends Remapper {
         // The values should be the relocated internal names (e.g., "org/relocated/").
         this.relocations = relocations;
     }
-//
-//    @Override
-//    public String map(String internalName) {
-//
-//        if (internalName == null) {
-//            return null;
-//        }
-//
-//        // Find a relocation pattern that matches the internal name.
-//        for (Map.Entry<String, String> entry : relocations.entrySet()) {
-//            String originalPrefix = entry.getKey();
-//
-//            if (!internalName.contains("/")) {
-//                String newPrefix = entry.getValue();
-//                return newPrefix + internalName.substring(originalPrefix.length());
-//            }
-//        }
-//
-//        // If no relocation applies, return the original name.
-//        return internalName;
-//    }
+
+    @Override
+    public String map(String internalName) {
+
+        if (internalName == null) {
+            return null;
+        }
+
+        // Find a relocation pattern that matches the internal name.
+        for (Map.Entry<String, String> entry : relocations.entrySet()) {
+            String originalPrefix = entry.getKey();
+
+            if (!internalName.contains("/")) {
+                String newPrefix = entry.getValue();
+                return newPrefix + internalName.substring(originalPrefix.length());
+            }
+        }
+
+        // If no relocation applies, return the original name.
+        return internalName;
+    }
 }

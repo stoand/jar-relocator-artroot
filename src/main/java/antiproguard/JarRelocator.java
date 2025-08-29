@@ -10,6 +10,9 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -33,27 +36,45 @@ public class JarRelocator {
     }
 
     private ClassWriter generateClassWriter(ClassReader classReader, ClassLoader classLoader) {
+        CustomRemapper superRemapper = this.remapper;
         return  new ClassWriter(classReader, ClassWriter.COMPUTE_FRAMES) {
+
             @Override
             protected String getCommonSuperClass(final String type1, final String type2) {
+//                return superRemapper.map(this.getCommonSuperClassInner(type1, type2));
+                return this.getCommonSuperClassInner(type1, type2);
+            }
+
+            private String getCommonSuperClassInner(final String type1, final String type2) {
 //                ClassLoader classLoader = this.getClassLoader();
 
                 Class<?> class1;
                 try {
-                    class1 = Class.forName(type1.replace('/', '.'), false, classLoader);
+                    // IMPORTANT - WE NEED TO REVERSE THE MAPPING
+                    class1 = Class.forName(type1.replace("artroot/", "").replace('/', '.'), false, classLoader);
                 } catch (Error | Exception e) {
-                    return "typenotpresent";
+//                            try {
+//            Files.writeString(Paths.get("/tmp/missing"), type1 + "\n", StandardOpenOption.APPEND);
+//        } catch (Exception var7) {
+//        }
+                    return "TypeNotPresentException";
 //                    throw new TypeNotPresentException(type1, e);
-//                    return type1;
+//                      return type1;
                 }
 
                 Class<?> class2;
                 try {
-                    class2 = Class.forName(type2.replace('/', '.'), false, classLoader);
+                    // IMPORTANT - WE NEED TO REVERSE THE MAPPING
+                    class2 = Class.forName(type2.replace("artroot/", "").replace('/', '.'), false, classLoader);
                 } catch (Error | Exception e) {
-                    return "typenotpresent";
+
+//                    try {
+//                        Files.writeString(Paths.get("/tmp/missing"), type2 + "\n", StandardOpenOption.APPEND);
+//                    } catch (Exception var7) {
+//                        System.out.println(var7.toString());
+//                    }
+                    return "TypeNotPresentException";
 //                        throw new TypeNotPresentException(type2, e);
-//                    return type2;
                 }
 
                 if (class1.isAssignableFrom(class2)) {
@@ -100,8 +121,8 @@ public class JarRelocator {
                     ClassWriter classWriter = this.generateClassWriter(classReader, classLoader);// Compute frames/maxs automatically if needed
 
 //                    ClassVisitor relocationVisitor = new RelocationClassVisitor(classWriter, remapper);
-                    ClassVisitor relocationVisitor = new ClassRemapper(classWriter, remapper);
-                    ClassVisitor chainVisitor = new ClassVisitor(Opcodes.ASM9, relocationVisitor) {
+//                    ClassVisitor relocationVisitor = new ClassRemapper(classWriter, remapper);
+                    ClassVisitor chainVisitor = new RelocationClassVisitor(classWriter, remapper) {
                         @Override
                         public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
                             // Get the MethodVisitor from the visitor we are wrapping (relocationVisitor)
