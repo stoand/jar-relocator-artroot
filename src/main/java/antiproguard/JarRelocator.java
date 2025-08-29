@@ -6,8 +6,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
@@ -27,6 +31,58 @@ public class JarRelocator {
         this.remapper = new CustomRemapper(relocations);
     }
 
+    private ClassWriter generateClassWriter(ClassReader classReader, File inputJar) {
+        return  new ClassWriter(classReader, ClassWriter.COMPUTE_FRAMES) {
+            @Override
+            protected String getCommonSuperClass(final String type1, final String type2) {
+//                ClassLoader classLoader = this.getClassLoader();
+
+                URL url;
+
+                try {
+                    url = inputJar.toURI().toURL();
+                    URL[] urls = new URL[]{url};
+
+                    // 2. Create a URLClassLoader
+                    URLClassLoader classLoader = new URLClassLoader(urls, JarRelocator.class.getClassLoader());
+
+                    Class<?> class1;
+                    try {
+                        class1 = Class.forName(type1.replace('/', '.'), false, classLoader);
+                    } catch (Error | Exception e) {
+//                        throw new TypeNotPresentException(type1, e);
+                        return "error/type/not/preset";
+                    }
+
+                    Class<?> class2;
+                    try {
+                        class2 = Class.forName(type2.replace('/', '.'), false, classLoader);
+                    } catch (Error | Exception e) {
+//                        throw new TypeNotPresentException(type2, e);
+                        return "error/type/not/preset";
+                    }
+
+                    if (class1.isAssignableFrom(class2)) {
+                        return type1;
+                    } else if (class2.isAssignableFrom(class1)) {
+                        return type2;
+                    } else if (!class1.isInterface() && !class2.isInterface()) {
+                        do {
+                            class1 = class1.getSuperclass();
+                        } while(!class1.isAssignableFrom(class2));
+
+                        return class1.getName().replace('.', '/');
+                    } else {
+                        return "java/lang/Object";
+                    }
+
+                } catch (MalformedURLException e) {
+                    return "java/lang/Object";
+                }
+            }
+        };
+    }
+
     public void relocate() throws IOException {
         try (JarInputStream jis = new JarInputStream(new FileInputStream(inputJar));
              JarOutputStream jos = new JarOutputStream(new FileOutputStream(outputJar))) {
@@ -44,7 +100,7 @@ public class JarRelocator {
                 if (entryName.endsWith(".class")) {
                     // Read the original class bytes
                     ClassReader classReader = new ClassReader(jis);
-                    ClassWriter classWriter = new ClassWriter(classReader, 0); // Compute frames/maxs automatically if needed
+                    ClassWriter classWriter = this.generateClassWriter(classReader, inputJar);// Compute frames/maxs automatically if needed
 
                     // Chain our remapping visitor
                     RelocationClassVisitor relocationVisitor = new RelocationClassVisitor(classWriter, remapper);
