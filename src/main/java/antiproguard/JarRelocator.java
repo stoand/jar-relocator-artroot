@@ -41,8 +41,8 @@ public class JarRelocator {
 
             @Override
             protected String getCommonSuperClass(final String type1, final String type2) {
-//                return superRemapper.map(this.getCommonSuperClassInner(type1, type2));
-                return this.getCommonSuperClassInner(type1, type2);
+                return superRemapper.map(this.getCommonSuperClassInner(type1, type2));
+//                return this.getCommonSuperClassInner(type1, type2);
             }
 
             private String getCommonSuperClassInner(final String type1, final String type2) {
