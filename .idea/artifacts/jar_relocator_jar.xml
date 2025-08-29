@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="jar-relocator:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/jar_relocator_jar</output-path>
+    <root id="archive" name="jar-relocator.jar">
+      <element id="module-output" name="jar-relocator" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/ow2/asm/asm-commons/9.7/asm-commons-9.7.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/ow2/asm/asm-tree/9.7/asm-tree-9.7.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/ow2/asm/asm/9.7/asm-9.7.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
