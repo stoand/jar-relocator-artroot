@@ -1,6 +1,7 @@
 package antiproguard;
-import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.*;
+import org.objectweb.asm.commons.ClassRemapper;
+import org.objectweb.asm.commons.JSRInlinerAdapter;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,52 +32,41 @@ public class JarRelocator {
         this.remapper = new CustomRemapper(relocations);
     }
 
-    private ClassWriter generateClassWriter(ClassReader classReader, File inputJar) {
+    private ClassWriter generateClassWriter(ClassReader classReader, ClassLoader classLoader) {
         return  new ClassWriter(classReader, ClassWriter.COMPUTE_FRAMES) {
             @Override
             protected String getCommonSuperClass(final String type1, final String type2) {
 //                ClassLoader classLoader = this.getClassLoader();
 
-                URL url;
-
+                Class<?> class1;
                 try {
-                    url = inputJar.toURI().toURL();
-                    URL[] urls = new URL[]{url};
+                    class1 = Class.forName(type1.replace('/', '.'), false, classLoader);
+                } catch (Error | Exception e) {
+                    return "typenotpresent";
+//                    throw new TypeNotPresentException(type1, e);
+//                    return type1;
+                }
 
-                    // 2. Create a URLClassLoader
-                    URLClassLoader classLoader = new URLClassLoader(urls, JarRelocator.class.getClassLoader());
-
-                    Class<?> class1;
-                    try {
-                        class1 = Class.forName(type1.replace('/', '.'), false, classLoader);
-                    } catch (Error | Exception e) {
-//                        throw new TypeNotPresentException(type1, e);
-                        return "error/type/not/preset";
-                    }
-
-                    Class<?> class2;
-                    try {
-                        class2 = Class.forName(type2.replace('/', '.'), false, classLoader);
-                    } catch (Error | Exception e) {
+                Class<?> class2;
+                try {
+                    class2 = Class.forName(type2.replace('/', '.'), false, classLoader);
+                } catch (Error | Exception e) {
+                    return "typenotpresent";
 //                        throw new TypeNotPresentException(type2, e);
-                        return "error/type/not/preset";
-                    }
+//                    return type2;
+                }
 
-                    if (class1.isAssignableFrom(class2)) {
-                        return type1;
-                    } else if (class2.isAssignableFrom(class1)) {
-                        return type2;
-                    } else if (!class1.isInterface() && !class2.isInterface()) {
-                        do {
-                            class1 = class1.getSuperclass();
-                        } while(!class1.isAssignableFrom(class2));
+                if (class1.isAssignableFrom(class2)) {
+                    return type1;
+                } else if (class2.isAssignableFrom(class1)) {
+                    return type2;
+                } else if (!class1.isInterface() && !class2.isInterface()) {
+                    do {
+                        class1 = class1.getSuperclass();
+                    } while(!class1.isAssignableFrom(class2));
 
-                        return class1.getName().replace('.', '/');
-                    } else {
-                        return "java/lang/Object";
-                    }
-
-                } catch (MalformedURLException e) {
+                    return class1.getName().replace('.', '/');
+                } else {
                     return "java/lang/Object";
                 }
             }
@@ -84,6 +74,13 @@ public class JarRelocator {
     }
 
     public void relocate() throws IOException {
+
+        URL url = inputJar.toURI().toURL();
+        URL[] urls = new URL[]{url};
+
+        // 2. Create a URLClassLoader
+        URLClassLoader classLoader = new URLClassLoader(urls, JarRelocator.class.getClassLoader());
+
         try (JarInputStream jis = new JarInputStream(new FileInputStream(inputJar));
              JarOutputStream jos = new JarOutputStream(new FileOutputStream(outputJar))) {
 
@@ -100,11 +97,33 @@ public class JarRelocator {
                 if (entryName.endsWith(".class")) {
                     // Read the original class bytes
                     ClassReader classReader = new ClassReader(jis);
-                    ClassWriter classWriter = this.generateClassWriter(classReader, inputJar);// Compute frames/maxs automatically if needed
+                    ClassWriter classWriter = this.generateClassWriter(classReader, classLoader);// Compute frames/maxs automatically if needed
+
+//                    ClassVisitor relocationVisitor = new RelocationClassVisitor(classWriter, remapper);
+                    ClassVisitor relocationVisitor = new ClassRemapper(classWriter, remapper);
+                    ClassVisitor chainVisitor = new ClassVisitor(Opcodes.ASM9, relocationVisitor) {
+                        @Override
+                        public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+                            // Get the MethodVisitor from the visitor we are wrapping (relocationVisitor)
+                            MethodVisitor mv = super.visitMethod(access, name, descriptor, signature, exceptions);
+
+                            // Crucial step: Wrap the existing MethodVisitor with JSRInlinerAdapter
+                            // JSRInlinerAdapter will process the bytecode first and pass the
+                            // modernized instructions to the next visitor in the chain (your relocator).
+                            if (mv != null) {
+                                // Note: You must pass the method information to the JSRInlinerAdapter's constructor
+                                mv = new JSRInlinerAdapter(mv, access, name, descriptor, signature, exceptions);
+                            }
+                            return mv;
+                        }
+                    };
+
+                    classReader.accept(chainVisitor, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
 
                     // Chain our remapping visitor
-                    RelocationClassVisitor relocationVisitor = new RelocationClassVisitor(classWriter, remapper);
-                    classReader.accept(relocationVisitor, SKIP_DEBUG | SKIP_FRAMES); // Faster parsing options
+                    // FINDME
+//                    RelocationClassVisitor modernizer = new RelocationClassVisitor(classWriter, remapper);
+//                    classReader.accept(modernizer, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES); // Faster parsing options
 
                     // Create a new entry name for the relocated class
                     String newClassName = remapper.map(entryName.substring(0, entryName.length() - ".class".length()));
