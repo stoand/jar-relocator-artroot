@@ -13,4 +13,10 @@ tool moves all classes in the root into a new `artroot` package so they can be r
 ## Usage
 
 * Download `jar-relocator.jar` from the releases of this project.
-* `java -jar jar-relocator.jar input.jar output.jar`
+* `java -jar jar-relocator-<VERSION>.jar input.jar output.jar`
+
+## Development
+
+* Install maven
+* `mvn package`
+* `java -jar target/jar-relocator-<VERSION>.jar input.jar output.jar`
