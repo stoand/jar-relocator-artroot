@@ -1,9 +1,6 @@
 package antiproguard;
 
-import org.objectweb.asm.AnnotationVisitor;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.*;
 import org.objectweb.asm.commons.Remapper;
 import org.objectweb.asm.commons.ClassRemapper; // For convenience in chaining
 
@@ -28,7 +25,12 @@ public class RelocationClassVisitor extends ClassRemapper {
         if (signature != null && !signature.startsWith("<")) {
             maybeChangedSignature = remapper.mapSignature(signature, true);
         }
-        super.visit(version, access, remapper.map(name), maybeChangedSignature, remapper.map(superName), remapper.mapTypes(interfaces));
+        int newAccess = access;
+        String newName = remapper.map(name);
+        if (!newName.equals(name)) {
+            newAccess = access & ~Opcodes.ACC_PRIVATE & ~Opcodes.ACC_PROTECTED & ~Opcodes.ACC_FINAL | Opcodes.ACC_PUBLIC;
+        }
+        super.visit(version, newAccess, newName, maybeChangedSignature, remapper.map(superName), remapper.mapTypes(interfaces));
     }
 
     // This method is called for each annotation on the class
@@ -47,6 +49,11 @@ public class RelocationClassVisitor extends ClassRemapper {
     // This method is called for each method
     @Override
     public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+
+        if (!remapper.map(className).equals(className)) {
+            access = access & ~Opcodes.ACC_PRIVATE & ~Opcodes.ACC_PROTECTED | Opcodes.ACC_PUBLIC;
+        }
+
         // Remap the method's name, descriptor, signature, and exceptions
         return super.visitMethod(access, remapper.mapMethodName(className, name, descriptor), remapper.mapMethodDesc(descriptor), remapper.mapSignature(signature, false), exceptions == null ? null : remapper.mapTypes(exceptions));
     }
