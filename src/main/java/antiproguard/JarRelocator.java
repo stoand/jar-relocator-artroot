@@ -18,11 +18,13 @@ public class JarRelocator {
 
     private final File inputJar;
     private final File outputJar;
+    private final File libsJar;
     private final CustomRemapper remapper;
 
-    public JarRelocator(File inputJar, File outputJar, Map<String, String> relocations) {
+    public JarRelocator(File inputJar, File outputJar, File libsJar, Map<String, String> relocations) {
         this.inputJar = inputJar;
         this.outputJar = outputJar;
+        this.libsJar = libsJar;
         this.remapper = new CustomRemapper(relocations);
     }
 
@@ -88,7 +90,13 @@ public class JarRelocator {
     public void relocate() throws IOException {
 
         URL url = inputJar.toURI().toURL();
-        URL[] urls = new URL[]{url};
+        URL[] urls;
+        if (libsJar != null) {
+            URL libsUrl = libsJar.toURI().toURL();
+            urls = new URL[]{url, libsUrl};
+        } else {
+            urls = new URL[]{url};
+        }
 
         // 2. Create a URLClassLoader
         URLClassLoader classLoader = new URLClassLoader(urls, JarRelocator.class.getClassLoader());
@@ -164,27 +172,15 @@ public class JarRelocator {
     public static void main(String[] args) throws IOException {
         File input = new File(args[0]);
         File output = new File(args[1]);
+        File libs = null;
 
-//        // Create a dummy input JAR for demonstration
-//        try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(input))) {
-//            jos.putNextEntry(new JarEntry("MyRootClass.class"));
-//            jos.write(new byte[]{/* dummy bytecode for MyRootClass */});
-//            jos.closeEntry();
-//            jos.putNextEntry(new JarEntry("com/example/MyPackageClass.class"));
-//            jos.write(new byte[]{/* dummy bytecode for MyPackageClass */});
-//            jos.closeEntry();
-//        }
-//        System.out.println("Created dummy input JAR: " + input.getName());
+        if (args[2].equals("--libs")) {
+            libs = new File(args[3]);
+        }
 
         Map<String, String> relocations = new HashMap<>();
-        // Relocate classes in the root package to "com/relocated/root/"
-        // ASM Remapper expects internal names (slashes, not dots)
-        relocations.put("", "artroot/"); // Empty string for root package
-
-        // Example: Relocate another specific package
-//        relocations.put("com/example/", "org/newexample/");
-
-        JarRelocator relocator = new JarRelocator(input, output, relocations);
+        relocations.put("", "artroot/");
+        JarRelocator relocator = new JarRelocator(input, output, libs, relocations);
         relocator.relocate();
 
         System.out.println("Relocation complete. Output JAR: " + output.getName());
