@@ -6,7 +6,7 @@
 
     <groupId>antiproguard</groupId>
     <artifactId>jar-relocator</artifactId>
-    <version>0.5</version>
+    <version>0.6</version>
 
     <build>
         <plugins>

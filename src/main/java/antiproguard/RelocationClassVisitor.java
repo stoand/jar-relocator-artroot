@@ -51,7 +51,7 @@ public class RelocationClassVisitor extends ClassRemapper {
     public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
 
         if (!remapper.map(className).equals(className)) {
-            access = access & ~Opcodes.ACC_PRIVATE & ~Opcodes.ACC_PROTECTED | Opcodes.ACC_PUBLIC;
+            access = access & ~Opcodes.ACC_FINAL & ~Opcodes.ACC_PRIVATE & ~Opcodes.ACC_PROTECTED | Opcodes.ACC_PUBLIC;
         }
 
         // Remap the method's name, descriptor, signature, and exceptions
