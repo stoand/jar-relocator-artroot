@@ -138,7 +138,7 @@ public class JarRelocator {
                         }
                     };
 
-                    classReader.accept(chainVisitor, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+                    classReader.accept(chainVisitor, ClassReader.SKIP_FRAMES);
 
                     // Chain our remapping visitor
                     // FINDME
